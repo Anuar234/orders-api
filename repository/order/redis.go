@@ -14,6 +14,10 @@ type RedisRepo struct {
 	Client *redis.Client
 }
 
+func orderIDKey(id uint64) string {
+	return fmt.Sprintf("order:%d", id)
+}
+
 func (r *RedisRepo) Insert(ctx context.Context, order model.Order) error {
 	data, err := json.Marshal(order)
 	if err != nil {
@@ -27,15 +31,15 @@ func (r *RedisRepo) Insert(ctx context.Context, order model.Order) error {
 	res := txn.SetNX(ctx, key, string(data), 0)
 	if err := res.Err(); err != nil {
 		txn.Discard()
-		 return fmt.Errorf("failed to set: %w", err)
+		return fmt.Errorf("failed to set: %w", err)
 	}
 
 	if err := txn.SAdd(ctx, "orders", key).Err(); err != nil {
 		txn.Discard()
 		return fmt.Errorf("failed to add to orders set: %w", err)
 	}
-	
-	if _, err := txn.Exec(ctx); err != nil{
+
+	if _, err := txn.Exec(ctx); err != nil {
 		return fmt.Errorf("failed to exec: %w", err)
 	}
 
@@ -63,7 +67,6 @@ func (r *RedisRepo) FindByID(ctx context.Context, id uint64) (model.Order, error
 	return order, nil
 }
 
-
 func (r *RedisRepo) DeleteByID(ctx context.Context, id uint64) error {
 	key := orderIDKey(id)
 
@@ -83,7 +86,7 @@ func (r *RedisRepo) DeleteByID(ctx context.Context, id uint64) error {
 		return fmt.Errorf("failed to remove from orders set: %w", err)
 	}
 
-	if _, err := txn.Exec(ctx); err != nil{
+	if _, err := txn.Exec(ctx); err != nil {
 		return fmt.Errorf("failed to exec: %w", err)
 	}
 
@@ -104,11 +107,12 @@ func (r *RedisRepo) Update(ctx context.Context, order model.Order) error {
 	} else if err != nil {
 		return fmt.Errorf("set order: %w", err)
 	}
+
 	return nil
 }
 
 type FindAllPage struct {
-	Size uint64
+	Size   uint64
 	Offset uint64
 }
 
@@ -121,8 +125,8 @@ func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, 
 	res := r.Client.SScan(ctx, "orders", page.Offset, "*", int64(page.Size))
 
 	keys, cursor, err := res.Result()
-	if err != nil{
-		return FindResult{}, fmt.Errorf("failed to get orders ids: %w", err)
+	if err != nil {
+		return FindResult{}, fmt.Errorf("failed to get order ids: %w", err)
 	}
 
 	if len(keys) == 0 {
@@ -131,13 +135,11 @@ func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, 
 		}, nil
 	}
 
-
-
-
 	xs, err := r.Client.MGet(ctx, keys...).Result()
 	if err != nil {
 		return FindResult{}, fmt.Errorf("failed to get orders: %w", err)
 	}
+
 	orders := make([]model.Order, len(xs))
 
 	for i, x := range xs {
