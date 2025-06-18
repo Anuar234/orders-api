@@ -5,7 +5,6 @@ import (
 	"orders-api/handler"
 	"orders-api/repository/order"
 
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -23,19 +22,6 @@ func (a *App) loadRoutes() {
 
 	a.router = router
 }
-
-// func (a *App) loadOrderRoutes(router chi.Router) {
-
-// 	orderHandler := &handler.Order{
-// 		Repo: 
-// 	} 
-
-// 	router.Post("/", orderHandler.Create)
-// 	router.Get("/", orderHandler.List)
-// 	router.Get("/{id}", orderHandler.GetByID)
-// 	router.Put("/{id}", orderHandler.UpdateByID)
-// 	router.Delete("/{id}", orderHandler.DeleteByID)
-// }
 
 func (a *App) loadOrderRoutes(router chi.Router) {
 	orderHandler := &handler.Order{
